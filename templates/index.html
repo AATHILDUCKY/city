@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kinniya UC Complaint System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome CDN -->
+    <script src="https://kit.fontawesome.com/a2d9a84d65.js" crossorigin="anonymous"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600&display=swap');
+        
+        .tamil {
+            font-family: 'Noto Sans Tamil', sans-serif;
+        }
+        
+        .card-hover-effect {
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+        
+        .card-hover-effect:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-icon {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex space-x-6">
+                <a href="/" class="text-lg font-bold text-blue-700 hover:text-blue-900 transition-colors">
+                    <i class="fas fa-home mr-2"></i>Home
+                </a>
+                <a href="/map" class="text-lg font-bold text-green-700 hover:text-green-900 transition-colors">
+                    <i class="fas fa-map-marked-alt mr-2"></i>Complaint Map
+                </a>
+            </div>
+            <div>
+                <a href="/admin" class="text-lg font-bold text-red-600 hover:text-red-800 transition-colors">
+                    <i class="fas fa-user-shield mr-2"></i>Admin
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto py-8 px-4 sm:px-6">
+        <div class="text-center mb-12">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-3">Report City Problems - Kinniya UC</h1>
+            <p class="text-lg text-gray-600 tamil">கின்னியா நகர சபைக்கு உங்கள் புகார்களை தெரிவிக்கவும்</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Mosquito -->
+            <a href="/complain/Mosquitto" class="bg-white rounded-xl shadow-md overflow-hidden card-hover-effect border border-gray-100">
+                <div class="relative h-40 w-full overflow-hidden">
+                    <img src="/static/images/mosqu.jpeg" alt="Mosquito Problems" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="category-icon text-green-600">
+                        <i class="fas fa-bug"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Mosquito Problems</h2>
+                    <p class="text-gray-600 text-sm tamil mb-2">கொசு தொல்லைகள்</p>
+                    <p class="text-gray-500 text-sm">Report mosquito breeding areas and related issues</p>
+                </div>
+            </a>
+
+            <!-- Road Blocks -->
+            <a href="/complain/roadblock" class="bg-white rounded-xl shadow-md overflow-hidden card-hover-effect border border-gray-100">
+                <div class="relative h-40 w-full overflow-hidden">
+                    <img src="/static/images/roadblock.jpg" alt="Road Block" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="category-icon text-gray-600">
+                        <i class="fas fa-road"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Road Blocks</h2>
+                    <p class="text-gray-600 text-sm tamil mb-2">சாலை தடைகள்</p>
+                    <p class="text-gray-500 text-sm">Report blocked roads, fallen trees, or construction obstacles</p>
+                </div>
+            </a>
+
+            <!-- Drainage -->
+            <a href="/complain/mosquito" class="bg-white rounded-xl shadow-md overflow-hidden card-hover-effect border border-gray-100">
+                <div class="relative h-40 w-full overflow-hidden">
+                    <img src="/static/images/drinage prroblem.jpg" alt="Drainage" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="category-icon text-blue-600">
+                        <i class="fas fa-water"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Drainage Problems</h2>
+                    <p class="text-gray-600 text-sm tamil mb-2">வடிகால் பிரச்சினைகள்</p>
+                    <p class="text-gray-500 text-sm">Clogged drains and water stagnation issues</p>
+                </div>
+            </a>
+
+            <!-- Road Lamps -->
+            <a href="/complain/roadlamps" class="bg-white rounded-xl shadow-md overflow-hidden card-hover-effect border border-gray-100">
+                <div class="relative h-40 w-full overflow-hidden">
+                    <img src="/static/images/lamp.jpg" alt="Road Lamps" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="category-icon text-yellow-500">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Road Lamps</h2>
+                    <p class="text-gray-600 text-sm tamil mb-2">வீதி விளக்குகள்</p>
+                    <p class="text-gray-500 text-sm">Report malfunctioning or broken street lamps</p>
+                </div>
+            </a>
+
+            <!-- Flood -->
+            <a href="/complain/flood" class="bg-white rounded-xl shadow-md overflow-hidden card-hover-effect border border-gray-100">
+                <div class="relative h-40 w-full overflow-hidden">
+                    <img src="/static/images/flood.jpeg" alt="Flood" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="category-icon text-blue-400">
+                        <i class="fas fa-water"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Flood</h2>
+                    <p class="text-gray-600 text-sm tamil mb-2">வெள்ளம்</p>
+                    <p class="text-gray-500 text-sm">Report flood-prone areas or emergency water issues</p>
+                </div>
+            </a>
+
+            <!-- Cleanliness -->
+            <a href="/complain/clean" class="bg-white rounded-xl shadow-md overflow-hidden card-hover-effect border border-gray-100">
+                <div class="relative h-40 w-full overflow-hidden">
+                    <img src="/static/images/clean.jpeg" alt="Cleanliness" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="category-icon text-red-500">
+                        <i class="fas fa-trash-alt"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">Cleanliness</h2>
+                    <p class="text-gray-600 text-sm tamil mb-2">சுத்தம்</p>
+                    <p class="text-gray-500 text-sm">Report garbage dumping, dirty streets, etc.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <footer class="bg-white py-6 mt-12 border-t">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <p class="text-gray-500 text-sm">&copy; 2025 Kinniya Urban Council. All rights reserved.</p>
+            <p class="text-gray-400 text-xs mt-2 tamil">கின்னியா நகர சபை - அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை</p>
+        </div>
+    </footer>
+</body>
+
+</html>

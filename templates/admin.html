@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar {
+            width: 250px;
+            transition: all 0.3s;
+        }
+        .sidebar-collapsed {
+            width: 80px;
+        }
+        .main-content {
+            margin-left: 250px;
+            transition: all 0.3s;
+        }
+        .main-content-collapsed {
+            margin-left: 80px;
+        }
+        .status-badge {
+            @apply px-2 py-1 rounded-full text-xs font-semibold;
+        }
+        .status-pending {
+            @apply bg-red-100 text-red-800;
+        }
+        .status-processing {
+            @apply bg-yellow-100 text-yellow-800;
+        }
+        .status-completed {
+            @apply bg-green-100 text-green-800;
+        }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 700px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 80px;
+            }
+            .main-content {
+                margin-left: 80px;
+            }
+            .sidebar-text {
+                display: none;
+            }
+            #sidebar-title {
+                display: none;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div class="sidebar bg-white shadow-md h-screen fixed top-0 left-0 overflow-y-auto" id="sidebar">
+        <div class="p-4 border-b flex items-center justify-between">
+            <h2 class="text-xl font-semibold" id="sidebar-title">Admin Panel</h2>
+            <button onclick="toggleSidebar()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <nav class="p-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/admin" class="flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-tachometer-alt mr-3"></i>
+                        <span class="sidebar-text">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/complaints/pending" class="flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-clock mr-3"></i>
+                        <span class="sidebar-text">Pending</span>
+                        <span class="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                            {{ stats.pending if stats else 0 }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/complaints/processing" class="flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-cog mr-3"></i>
+                        <span class="sidebar-text">Processing</span>
+                        <span class="ml-auto bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                            {{ stats.processing if stats else 0 }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/complaints/completed" class="flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-check-circle mr-3"></i>
+                        <span class="sidebar-text">Completed</span>
+                        <span class="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                            {{ stats.completed if stats else 0 }}
+                        </span>
+                    </a>
+                </li>
+                <li class="pt-4 border-t mt-4">
+                    <a href="/" class="flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-home mr-3"></i>
+                        <span class="sidebar-text">Back to Home</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content p-6" id="main-content">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">
+                {% if request.url.path == '/admin/complaints/pending' %}Pending Complaints
+                {% elif request.url.path == '/admin/complaints/processing' %}Processing Complaints
+                {% elif request.url.path == '/admin/complaints/completed' %}Completed Complaints
+                {% else %}All Complaints{% endif %}
+            </h1>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <select id="period-filter" class="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all" {% if not period or period == 'all' %}selected{% endif %}>All Time</option>
+                        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                        <option value="week" {% if period == 'week' %}selected{% endif %}>Last Week</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>Last Month</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <button id="refresh-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Pending</p>
+                        <h3 class="text-2xl font-bold">{{ stats.pending if stats else 0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Processing</p>
+                        <h3 class="text-2xl font-bold">{{ stats.processing if stats else 0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Completed</p>
+                        <h3 class="text-2xl font-bold">{{ stats.completed if stats else 0 }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complaints Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for complaint in complaints %}
+                        <tr class="hover:bg-gray-50 cursor-pointer" onclick="openModal('{{ complaint.id }}', '{{ complaint.category }}', '{{ complaint.description or "No description" }}', '{{ complaint.full_name }}', '{{ complaint.phone }}', '{{ complaint.lat }}', '{{ complaint.lng }}', '{{ complaint.image }}', '{{ complaint.status }}', '{{ complaint.created_at }}')">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ complaint.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ complaint.category }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{{ complaint.description or "No description" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="status-badge {% if complaint.status == 'pending' %}status-pending{% elif complaint.status == 'processing' %}status-processing{% else %}status-completed{% endif %}">
+                                    {{ complaint.status|title }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if request.url.path == '/admin/complaints/completed' %}
+                                    {{ complaint.completed_at }}
+                                {% else %}
+                                    {{ complaint.created_at }}
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                {% if complaint.status == 'pending' %}
+                                <form action="/update-status" method="post" class="inline">
+                                    <input type="hidden" name="complaint_id" value="{{ complaint.id }}">
+                                    <input type="hidden" name="status" value="processing">
+                                    <button type="submit" class="text-yellow-600 hover:text-yellow-900">Start Processing</button>
+                                </form>
+                                {% endif %}
+                                
+                                {% if complaint.status != 'completed' %}
+                                <form action="/complete" method="post" class="inline ml-2" onsubmit="return confirm('Are you sure you want to mark this as completed?')">
+                                    <input type="hidden" name="complaint_id" value="{{ complaint.id }}">
+                                    <button type="submit" class="text-green-600 hover:text-green-900">Complete</button>
+                                </form>
+                                {% endif %}
+                                
+                                <a href="/admin/history/{{ complaint.id }}" class="text-blue-600 hover:text-blue-900 ml-2">History</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        {% if not complaints %}
+        <div class="bg-white rounded-lg shadow-md p-8 text-center mt-6">
+            <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-700">No complaints found</h3>
+            <p class="text-gray-500 mt-1">There are currently no complaints to display</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Complaint Details Modal -->
+    <div id="complaintModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xl font-bold mb-4">Complaint Details</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Category</p>
+                            <p class="font-medium" id="modal-category"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <p class="font-medium" id="modal-status"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Submitted Date</p>
+                            <p class="font-medium" id="modal-date"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Submitted By</p>
+                            <p class="font-medium" id="modal-name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Phone Number</p>
+                            <p class="font-medium" id="modal-phone"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Location</p>
+                            <p class="font-medium" id="modal-location"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Description</p>
+                            <p class="text-sm" id="modal-description"></p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-500 mb-2">Complaint Image</p>
+                        <img id="modal-image" src="" alt="Complaint Image" class="w-full h-auto rounded-md border border-gray-200">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="closeModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle sidebar collapse
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            sidebar.classList.toggle('sidebar-collapsed');
+            mainContent.classList.toggle('main-content-collapsed');
+            
+            document.querySelectorAll('.sidebar-text').forEach(el => {
+                el.classList.toggle('hidden');
+            });
+            
+            const title = document.getElementById('sidebar-title');
+            if (sidebar.classList.contains('sidebar-collapsed')) {
+                title.innerHTML = '<i class="fas fa-shield-alt"></i>';
+            } else {
+                title.textContent = 'Admin Panel';
+            }
+        }
+
+        // Handle period filter change
+        document.getElementById('period-filter').addEventListener('change', function() {
+            const period = this.value;
+            const currentPath = window.location.pathname;
+            window.location.href = `${currentPath}?period=${period}`;
+        });
+
+        // Refresh button
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+            window.location.reload();
+        });
+
+        // Modal functions
+        function openModal(id, category, description, fullName, phone, lat, lng, image, status, date) {
+            const modal = document.getElementById('complaintModal');
+            document.getElementById('modal-category').textContent = category;
+            document.getElementById('modal-description').textContent = description;
+            document.getElementById('modal-name').textContent = fullName;
+            document.getElementById('modal-phone').textContent = phone;
+            document.getElementById('modal-location').textContent = `Lat: ${lat}, Lng: ${lng}`;
+            document.getElementById('modal-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            document.getElementById('modal-date').textContent = date;
+            
+            const imgElement = document.getElementById('modal-image');
+            if (image) {
+                imgElement.src = image;
+                imgElement.style.display = 'block';
+            } else {
+                imgElement.style.display = 'none';
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('complaintModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('complaintModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

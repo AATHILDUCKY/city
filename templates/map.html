@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Complaint Map - City Urban Council</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#1e40af',
+                        danger: '#dc2626',
+                        warning: '#ea580c',
+                        success: '#16a34a',
+                        pending: '#dc2626',
+                        processing: '#eab308',
+                        completed: '#16a34a'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #map {
+            height: calc(100vh - 80px);
+            width: 100%;
+        }
+        .legend {
+            padding: 10px;
+            background: white;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            line-height: 24px;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.9;
+            border-radius: 50%;
+        }
+        .filter-chip {
+            display: inline-block;
+            padding: 4px 12px;
+            margin: 0 4px 4px 0;
+            background-color: #e5e7eb;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .filter-chip:hover, .filter-chip.active {
+            background-color: #2563eb;
+            color: white;
+        }
+        .complaint-popup img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        .custom-marker {
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        @media (max-width: 640px) {
+            #map {
+                height: calc(100vh - 140px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-xl font-bold text-primary">Complaint Map</span>
+            </div>
+            <div class="flex space-x-4">
+                <a href="/" class="text-lg font-medium text-gray-700 hover:text-primary transition">
+                    <i class="fas fa-home mr-1"></i>Home
+                </a>
+                <a href="/map" class="text-lg font-medium text-gray-700 hover:text-primary transition">
+                    <i class="fas fa-map-marked-alt mr-1"></i>Map
+                </a>
+                <a href="/admin" class="text-lg font-medium text-danger hover:text-red-800 transition">
+                    <i class="fas fa-user-shield mr-1"></i>Admin
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Floating Control Panel -->
+    <div class="fixed bottom-4 right-4 z-40 flex flex-col space-y-2">
+        <button onclick="locateUser()" class="bg-primary hover:bg-secondary text-white p-3 rounded-full shadow-lg transition transform hover:scale-105">
+            <i class="fas fa-crosshairs text-xl"></i>
+        </button>
+        <button onclick="showAddComplaintModal()" class="bg-success hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition transform hover:scale-105">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend fixed bottom-4 left-4 z-40">
+        <h4 class="font-bold mb-2">Complaint Status</h4>
+        <div class="flex items-center mb-1">
+            <i style="background-color: #dc2626;"></i><span>Pending</span>
+        </div>
+        <div class="flex items-center mb-1">
+            <i style="background-color: #eab308;"></i><span>Processing</span>
+        </div>
+        <div class="flex items-center">
+            <i style="background-color: #16a34a;"></i><span>Completed</span>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="fixed top-20 left-0 right-0 bg-white shadow-md z-30 p-3">
+        <div class="flex overflow-x-auto space-x-2 pb-1">
+            <span class="filter-chip active" onclick="filterComplaints('today')">Today</span>
+            <span class="filter-chip" onclick="filterComplaints('week')">This Week</span>
+            <span class="filter-chip" onclick="filterComplaints('month')">This Month</span>
+            <span class="filter-chip" onclick="filterComplaints('all')">All Time</span>
+        </div>
+    </div>
+
+    <!-- Add Complaint Modal -->
+    <div id="addComplaintModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-primary">Add New Complaint</h3>
+                <button onclick="hideAddComplaintModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="complaintForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Category</label>
+                    <select name="category" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                        <option value="">Select a category</option>
+                        <option value="Garbage">Garbage</option>
+                        <option value="Road Damage">Road Damage</option>
+                        <option value="Water Leak">Water Leak</option>
+                        <option value="Electricity">Electricity</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Description</label>
+                    <textarea name="description" rows="3" class="w-full p-2 border border-gray-300 rounded-lg" required></textarea>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Your Name</label>
+                    <input type="text" name="full_name" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Phone Number</label>
+                    <input type="tel" name="phone" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Location</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="modalLat" name="lat" placeholder="Latitude" readonly class="flex-1 p-2 border border-gray-300 rounded-lg bg-gray-100">
+                        <input type="text" id="modalLng" name="lng" placeholder="Longitude" readonly class="flex-1 p-2 border border-gray-300 rounded-lg bg-gray-100">
+                        <button type="button" onclick="getLocationForModal()" class="bg-primary text-white p-2 rounded-lg">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Photo</label>
+                    <input type="file" name="image" accept="image/*" capture="environment" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="hideAddComplaintModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([8.5800, 81.2300], 13); // Default to Sri Lanka coordinates
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Create marker clusters
+        const markers = L.markerClusterGroup({
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            maxClusterRadius: 60
+        });
+
+        // Function to get color based on status
+        function getStatusColor(status) {
+            switch(status) {
+                case 'processing': return '#eab308'; // yellow
+                case 'completed': return '#16a34a'; // green
+                default: return '#dc2626'; // red (pending)
+            }
+        }
+
+        // Function to create custom marker icon
+        function createMarkerIcon(status) {
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background-color: ${getStatusColor(status)}; 
+                       width: 20px; 
+                       height: 20px; 
+                       border-radius: 50%; 
+                       border: 2px solid white;
+                       transform: translate(-10px, -10px);"></div>`,
+                iconSize: [20, 20]
+            });
+        }
+
+        // Load complaints from server and add to map
+        const complaints = JSON.parse('{{ complaints | tojson | safe }}');
+        
+        complaints.forEach(complaint => {
+            const marker = L.marker(
+                [complaint.lat, complaint.lng], 
+                { 
+                    icon: createMarkerIcon(complaint.status) 
+                }
+            );
+            
+            // Create popup content
+            const popupContent = `
+                <div class="complaint-popup">
+                    <h4 class="font-bold">${complaint.category}</h4>
+                    <p class="text-sm">${complaint.description || 'No description provided'}</p>
+                    <p class="text-xs mt-1">
+                        Status: <span class="font-semibold" style="color: ${getStatusColor(complaint.status)};">
+                            ${complaint.status.charAt(0).toUpperCase() + complaint.status.slice(1)}
+                        </span>
+                    </p>
+                    <p class="text-xs mt-1">
+                        Reported by: ${complaint.full_name}<br>
+                        ${new Date(complaint.created_at).toLocaleString()}
+                    </p>
+                    ${complaint.image ? `<img src="${complaint.image}" alt="Complaint Image" class="mt-2">` : ''}
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            markers.addLayer(marker);
+        });
+
+        // Add markers to map
+        map.addLayer(markers);
+
+        // Fit map to markers if there are any
+        if (complaints.length > 0) {
+            map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+        }
+
+        // Function to filter complaints
+        function filterComplaints(filter) {
+            // Update active filter chip
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reload page with new filter
+            window.location.href = `/map?period=${filter}`;
+        }
+
+        // Locate user button handler
+        function locateUser() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(success => {
+                const lat = success.coords.latitude;
+                const lng = success.coords.longitude;
+                map.setView([lat, lng], 15);
+            }, error => {
+                alert("Could not get your location. Please enable location services.");
+            });
+        }
+
+        // Modal functions
+        function showAddComplaintModal() {
+            document.getElementById('addComplaintModal').classList.remove('hidden');
+        }
+
+        function hideAddComplaintModal() {
+            document.getElementById('addComplaintModal').classList.add('hidden');
+        }
+
+        function getLocationForModal() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(success => {
+                document.getElementById('modalLat').value = success.coords.latitude;
+                document.getElementById('modalLng').value = success.coords.longitude;
+            }, error => {
+                alert("Could not get your location. Please enable location services.");
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('complaintForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    alert('Complaint submitted successfully!');
+                    hideAddComplaintModal();
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.detail || 'Failed to submit complaint'}`);
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            }
+        });
+
+        // Initialize filter chips
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const period = urlParams.get('period') || 'today';
+            
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                if (chip.textContent.toLowerCase().includes(period)) {
+                    chip.classList.add('active');
+                } else {
+                    chip.classList.remove('active');
+                }
+                
+                chip.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-chip').forEach(c => {
+                        c.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
